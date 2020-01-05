@@ -112,17 +112,19 @@ String TwitterBearerToken::getNewToken(const char * consumerKey, const char * co
 				}
 			}
 			if (avail) {
-				DynamicJsonBuffer jsonBuffer;
-				JsonObject& root = jsonBuffer.parseObject(body);
-				if (root.success()) {
-					if (root.containsKey("access_token")) {
-						token = root["access_token"].as<String>();
-						return token;
-					}
+				DynamicJsonDocument jsonBuffer(1024);
+				auto error = deserializeJson(jsonBuffer, body);
+				if (error) {
+					Serial.println(F("Error with response: deserializeJson() failed:"));
+					Serial.println(error.c_str());
+					break;
 				}
-				Serial.println("Error with response:");
-				Serial.println(body);
-				break;
+				//JsonObject root = jsonBuffer.to<JsonObject>();
+				// or automatic conversion
+				if (jsonBuffer["access_token"]) {
+					token = jsonBuffer["access_token"].as<String>();
+					return token;
+				}
 			}
 		}
 	}
