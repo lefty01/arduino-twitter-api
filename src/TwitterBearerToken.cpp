@@ -22,111 +22,116 @@
 #include "TwitterBearerToken.h"
 
 TwitterBearerToken::TwitterBearerToken(Client &client)	{
-	this->client = &client;
+  this->client = &client;
 }
 
 char *  TwitterBearerToken::getEncodedBearerCredentials(const char * consumerKey, const char * consumerSecret) {
-	char toencodeLen = strlen(consumerKey)+strlen(consumerSecret)+1;
-	char *toencode = new char[toencodeLen];
-	if(toencode == NULL)
-  {
-    return NULL;
-  }
-	char *encodedCredentials = new char[base64_encode_expected_len(toencodeLen)+1];
-	if(encodedCredentials == NULL)
-  {
+  char toencodeLen = strlen(consumerKey) + strlen(consumerSecret) + 1;
+  char *toencode = new char[toencodeLen];
+  if(toencode == NULL) {
     return NULL;
   }
 
-	// They say to URL encode the key and secret for future proofing, but I am a rebel
+  char *encodedCredentials = new char[base64_encode_expected_len(toencodeLen) + 1];
+  if(encodedCredentials == NULL) {
+    return NULL;
+  }
+
+  // They say to URL encode the key and secret for future proofing, but I am a rebel
   sprintf(toencode, "%s:%s", consumerKey, consumerSecret);
   Serial.println(toencode);
-  if(base64_encode_chars(toencode, toencodeLen, encodedCredentials) > 0 ){
-		Serial.println(String(encodedCredentials));
-		return encodedCredentials;
+  if (base64_encode_chars(toencode, toencodeLen, encodedCredentials) > 0 ) {
+    Serial.println(String(encodedCredentials));
+    return encodedCredentials;
   }
 
-	return NULL;
+  return NULL;
 }
 
 String TwitterBearerToken::getNewToken(const char * consumerKey, const char * consumerSecret) {
-	char body[200];
+  char body[200];
 
   String encodedCredentials = String(getEncodedBearerCredentials(consumerKey, consumerSecret));
-	bool finishedHeaders = false;
-	bool currentLineIsBlank = true;
-	unsigned long now;
-	bool avail;
-	// Connect with twitter api over ssl
-	Serial.println(".... trying server");
-	if (client->connect(TWB_API_HOST, TWB_API_SSL_PORT)) {
-		Serial.println(".... connected to server for token");
-		String a="";
-		char c;
-		int ch_count=0;
-		client->println("POST /oauth2/token HTTP/1.1");
-		client->println("Host: " TWB_API_HOST);
-		client->println("User-Agent: arduino/1.0.0");
-		client->println("Authorization: Basic " + encodedCredentials);
+  bool finishedHeaders = false;
+  bool currentLineIsBlank = true;
+  unsigned long now;
+  bool avail;
+
+  // Connect with twitter api over ssl
+  Serial.println(".... trying server");
+  if (client->connect(TWB_API_HOST, TWB_API_SSL_PORT)) {
+    Serial.println(".... connected to server for token");
+    String a = "";
+    char c;
+    int ch_count=0;
+
+    client->println("POST /oauth2/token HTTP/1.1");
+    client->println("Host: " TWB_API_HOST);
+    client->println("User-Agent: arduino/1.0.0");
+    client->println("Authorization: Basic " + encodedCredentials);
     client->println("Accept: */*");
-		client->println("Content-Length: 29");
+    client->println("Content-Length: 29");
     client->println("Content-Type: application/x-www-form-urlencoded;charset=utf-8");
-		client->println();
+    client->println();
+
     delay(100);
-		client->println("grant_type=client_credentials");
+    client->println("grant_type=client_credentials");
 
     Serial.println("POST /oauth2/token HTTP/1.1");
-		Serial.println("Host: " TWB_API_HOST);
-		Serial.println("User-Agent: arduino/1.0.0");
-		Serial.println("Authorization: Basic " + encodedCredentials);
+    Serial.println("Host: " TWB_API_HOST);
+    Serial.println("User-Agent: arduino/1.0.0");
+    Serial.println("Authorization: Basic " + encodedCredentials);
     Serial.println("Accept: */*");
-		Serial.println("Content-Length: 29");
+    Serial.println("Content-Length: 29");
     Serial.println("Content-Type: application/x-www-form-urlencoded");
-		Serial.println();
-		Serial.println("grant_type=client_credentials");
-		now=millis();
-		avail=false;
-		while (millis() - now < TWB_API_TIMEOUT) {
-			while (client->available()) {
-        Serial.println("Got something");
-				// Allow body to be parsed before finishing
-				avail = finishedHeaders;
-				char c = client->read();
-				Serial.write(c);
+    Serial.println();
+    Serial.println("grant_type=client_credentials");
 
-				if(!finishedHeaders){
-					if (currentLineIsBlank && c == '\n') {
-						finishedHeaders = true;
-					}
-				} else {
-					if (ch_count < maxMessageLength)  {
-						body[ch_count] = c;
-						ch_count++;
-					}
-				}
+    now = millis();
+    avail = false;
 
-				if (c == '\n') {
-					currentLineIsBlank = true;
-				}else if (c != '\r') {
-					currentLineIsBlank = false;
-				}
-			}
-			if (avail) {
-				DynamicJsonDocument jsonBuffer(1024);
-				auto error = deserializeJson(jsonBuffer, body);
-				if (error) {
-					Serial.println(F("Error with response: deserializeJson() failed:"));
-					Serial.println(error.c_str());
-					break;
-				}
-				//JsonObject root = jsonBuffer.to<JsonObject>();
-				// or automatic conversion
-				if (jsonBuffer["access_token"]) {
-					token = jsonBuffer["access_token"].as<String>();
-					return token;
-				}
-			}
-		}
+    while (millis() - now < TWB_API_TIMEOUT) {
+      while (client->available()) {
+	Serial.println("Got something");
+	// Allow body to be parsed before finishing
+	avail = finishedHeaders;
+	char c = client->read();
+	Serial.write(c);
+
+	if (!finishedHeaders) {
+	  if (currentLineIsBlank && c == '\n') {
+	    finishedHeaders = true;
+	  }
 	}
-	return "";
+	else {
+	  if (ch_count < maxMessageLength)  {
+	    body[ch_count] = c;
+	    ch_count++;
+	  }
+	}
+
+	if (c == '\n') {
+	  currentLineIsBlank = true;
+	}
+	else if (c != '\r') {
+	  currentLineIsBlank = false;
+	}
+      }
+      if (avail) {
+	DynamicJsonDocument jsonBuffer(1024);
+	auto error = deserializeJson(jsonBuffer, body);
+	if (error) {
+	  Serial.println(F("Error with response: deserializeJson() failed:"));
+	  Serial.println(error.c_str());
+	  break;
+	}
+
+	if (jsonBuffer["access_token"]) {
+	  token = jsonBuffer["access_token"].as<String>();
+	  return token;
+	}
+      }
+    }
+  }
+  return "";
 }

@@ -33,15 +33,15 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 class TwitterBearerToken
 {
-  public:
-    TwitterBearerToken(Client &client);
-    String getNewToken(const char * consumerKey, const char * consumerSecret);
-    String token;
+public:
+  TwitterBearerToken(Client &client);
+  String getNewToken(const char * consumerKey, const char * consumerSecret);
+  String token;
 
-  private:
-    Client *client;
-    char * getEncodedBearerCredentials(const char * consumerKey, const char * consumerSecret);
-    const int maxMessageLength = 1000;
+private:
+  Client *client;
+  char * getEncodedBearerCredentials(const char * consumerKey, const char * consumerSecret);
+  const int maxMessageLength = 1000;
 };
 
 #endif
